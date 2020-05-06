@@ -101,7 +101,7 @@ We now have our proportion data. Since t-tests are not happy with proportions (u
 ```{r}
 library(car)
 
-par(mfrow=c(2,2))
+par(mfrow=c(3,2))
 qqp(raw$dur_prop.W, "norm")
 qqp(raw$dur_prop.B, "norm")
 qqp(form$dur_prop.W, "norm")
