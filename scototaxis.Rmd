@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Data collection
 
-```{r, warning=FALSE, message=FALSE}
+```{r}
 library(curl)
 
 raw <- curl("https://raw.githubusercontent.com/allisondavis/scototaxis/master/Scototaxis_raw_cole-data.csv")
@@ -20,4 +20,146 @@ raw <- read.csv(raw, header = TRUE, sep = ",", stringsAsFactors = TRUE)
 
 head(raw)
 
+form <- raw[raw$Species == "P. formosa", ]
+head(form)
+
+lat <- raw[raw$Species == "P. latipinna", ]
+head(lat)
+
 ```
+
+
+## Analyses {.tabset .tabset-fade .tabset-pills}
+### First look
+
+Here we will look at summary statistics and visualize our data. 
+
+  * for now, we will be focusing on duration in each color (black and white).
+
+
+```{r}
+library(rstatix)
+
+
+get_summary_stats(form, show = c("mean", "sd", "median", "iqr"))
+ 
+get_summary_stats(lat, show = c("mean", "sd", "median", "iqr"))
+
+boxplot(data=raw, Dur_white ~ Tank * Species, xlab= "Tank.Species", ylab= "Duration in white (s)")
+
+boxplot(data=raw, Dur_black ~ Tank * Species, xlab= "Tank.Species", ylab= "Duration in black (s)")
+
+
+
+```
+
+<font color= "deeporchid4"> ***RESULTS:***</font> From the box plots, we see that the amazons look consistent between tanks, but the sailfins change their duration in a color across tanks (aka trials). Best to see how this stands statistically.
+
+
+
+
+### Stats
+
+Each fish got 10min trial, and so scoring should be around 600s. While all durations are close to this sum, they're not exact, so it's better to work with the proportion of time in each color. Thus we need to add a proportion column.
+
+```{r}
+dur_sums <- rowSums(raw[5:6]) 
+raw <- cbind(raw, dur_sums)
+
+dur_sums <- rowSums(form[5:6]) 
+form <- cbind(form, dur_sums)
+
+dur_sums <- rowSums(lat[5:6]) 
+lat <- cbind(lat, dur_sums)
+
+dur_prop <- lapply(raw[5:6], function(x){x/dur_sums}) 
+raw <- cbind(raw, dur_prop) #creates two columns with same name; use name function below to specify column name
+names(raw)[16] <- "dur_prop.W"
+names(raw)[17] <- "dur_prop.B"
+
+dur_prop <- lapply(form[5:6], function(x){x/dur_sums}) 
+form <- cbind(form, dur_prop) #creates two columns with same name; use name function below to specify column name
+names(form)[16] <- "dur_prop.W"
+names(form)[17] <- "dur_prop.B"
+
+dur_prop <- lapply(lat[5:6], function(x){x/dur_sums}) 
+lat <- cbind(lat, dur_prop) #creates two columns with same name; use name function below to specify column name
+names(lat)[16] <- "dur_prop.W"
+names(lat)[17] <- "dur_prop.B"
+
+
+
+```
+
+
+We now have our proportion data. Since t-tests are not happy with proportions (usually require a transformation of some sort), and since we have a small, non-independent sample size, we'll use Wilcox signed rank and rank sum tests (rank sum==mann whitney u).
+
+  * here, non-independent means that you HAVE to be in either white or black, there's no neutral option. So if you're not in black, you're automatically in white. 
+  
+  * just for funsies, we can check the distribution - they look aight in terms of normality, get wonky on the end for formosa, and surprisingly normal for the 4 points of lat... still, with proportions going to use wilcox tests.
+
+```{r}
+library(car)
+
+par(mfrow=c(2,2))
+qqp(raw$dur_prop.W, "norm")
+qqp(raw$dur_prop.B, "norm")
+qqp(form$dur_prop.W, "norm")
+qqp(form$dur_prop.B, "norm")
+qqp(lat$dur_prop.W, "norm")
+qqp(lat$dur_prop.B, "norm")
+
+
+```
+
+
+
+#### Wilcox sign rank test
+
+The wilcox sign rank test will be used to determine if there is a difference in proportion of time spent in each color between trials/tanks. Since these are the same individuals, the data is paired (each individual has a proportion in tank A and tank B, we want to see if this differs). 
+
+  * wilcox.test:
+      + when paired=TRUE: performs a signed rank test, testing the null hyp that x-y is symmetric about mu; our null is that x-y (duration in tank A and B) is 0, so mu is 0.
+      + when paired=FALSE: performs a rank sum test, testing null hyp that the distributions of x and y differ by a location shift of mu (alt is their shit is something other than mu); again, our null hyp is that the distribution of x and y (form and lat) do not differ, so mu is 0.
+
+```{r}
+wilcox.test(dur_prop.W~Tank, data=form, paired=TRUE) 
+wilcox.test(dur_prop.B~Tank, data=form, paired=TRUE)
+wilcox.test(dur_prop.W~Tank, data=lat, paired=TRUE)
+wilcox.test(dur_prop.B~Tank, data=lat, paired=TRUE)
+
+
+```
+
+<font color= "deeporchid4"> ***RESULTS:***</font> The proportion in W and B do not differ between tanks A and B within each species. So despite the boxplots looking a bit different between A and B for sailfins, looks like statistically they perform similarly across trials. This means we can average an individuals time in white and time in black for both trials to obtain a single duration in each color for each individaul.
+
+```{r}
+
+avg.dur_prop.W <-aggregate(dur_prop.W~X.U.FEFF.Name, raw, mean)
+
+avg.dur_prop.B <-aggregate(dur_prop.B~X.U.FEFF.Name, raw, mean)
+
+raw2 <- cbind(avg.dur_prop.W, avg.dur_prop.B)
+raw2 <- raw2[-c(3)]
+
+#now have a dataframe (raw2) with name, avg dur in W, and avg dur in B --> need spp info too; not sure how to automate
+ 
+spp <- c("form", "form", "form", "form", "lat", "form", "form", "form", "form", "form", "lat", "form")
+
+raw2 <- cbind(raw2, spp)
+
+#now our dataframe has name, spp, and avg durations
+
+```
+
+
+The ultimate goal is to determine if the species differ in their durations. *Will be a little awkward since we only have 2 sailfin to our 10 amazons, but we'll go with it for now.* For this, we'll use a wilcox sum rank test (aka mann whitney u), since we're looking for differences between two groups, but this time the groups aren't paired (our groups here are species, not the tanks). 
+
+
+```{r}
+wilcox.test(dur_prop.W~spp, data = raw2, paired=FALSE, mu=0.5)
+wilcox.test(dur_prop.B~spp, data = raw2, paired=FALSE, mu=0.5)
+
+```
+
+<font color= "deeporchid4"> ***RESULTS:***</font> got non-significant results for both tests...in fact, got the same p-value (0.06061), so I'm not sure if that's a result of having so few sailfins or if I did the test wrong. At the moment, it does not seem that the species differ in their 
