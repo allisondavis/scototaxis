@@ -63,27 +63,27 @@ boxplot(data=raw, Dur_black ~ Tank * Species, xlab= "Tank.Species", ylab= "Durat
 Each fish got 10min trial, and so scoring should be around 600s. While all durations are close to this sum, they're not exact, so it's better to work with the proportion of time in each color. Thus we need to add a proportion column.
 
 ```{r}
-dur_sums <- rowSums(raw[5:6]) 
-raw <- cbind(raw, dur_sums)
+dur_sums.R <- rowSums(raw[5:6]) 
+raw <- cbind(raw, dur_sums.R)
 
-dur_sums <- rowSums(form[5:6]) 
-form <- cbind(form, dur_sums)
+dur_sums.F <- rowSums(form[5:6]) 
+form <- cbind(form, dur_sums.F)
 
-dur_sums <- rowSums(lat[5:6]) 
-lat <- cbind(lat, dur_sums)
+dur_sums.L <- rowSums(lat[5:6]) 
+lat <- cbind(lat, dur_sums.L)
 
-dur_prop <- lapply(raw[5:6], function(x){x/dur_sums}) 
-raw <- cbind(raw, dur_prop) #creates two columns with same name; use name function below to specify column name
+dur_prop.R <- lapply(raw[5:6], function(x){x/dur_sums.R}) 
+raw <- cbind(raw, dur_prop.R) #creates two columns with same name; use name function below to specify column name
 names(raw)[16] <- "dur_prop.W"
 names(raw)[17] <- "dur_prop.B"
 
-dur_prop <- lapply(form[5:6], function(x){x/dur_sums}) 
-form <- cbind(form, dur_prop) #creates two columns with same name; use name function below to specify column name
+dur_prop.F <- lapply(form[5:6], function(x){x/dur_sums.F}) 
+form <- cbind(form, dur_prop.F) #creates two columns with same name; use name function below to specify column name
 names(form)[16] <- "dur_prop.W"
 names(form)[17] <- "dur_prop.B"
 
-dur_prop <- lapply(lat[5:6], function(x){x/dur_sums}) 
-lat <- cbind(lat, dur_prop) #creates two columns with same name; use name function below to specify column name
+dur_prop.L <- lapply(lat[5:6], function(x){x/dur_sums.L}) 
+lat <- cbind(lat, dur_prop.L) #creates two columns with same name; use name function below to specify column name
 names(lat)[16] <- "dur_prop.W"
 names(lat)[17] <- "dur_prop.B"
 
@@ -135,11 +135,11 @@ wilcox.test(dur_prop.B~Tank, data=lat, paired=TRUE)
 
 ```{r}
 
-avg.dur_prop.W <-aggregate(dur_prop.W~X.U.FEFF.Name, raw, mean)
+avg.dur_prop.W.R <-aggregate(dur_prop.W~X.U.FEFF.Name, raw, mean)
 
-avg.dur_prop.B <-aggregate(dur_prop.B~X.U.FEFF.Name, raw, mean)
+avg.dur_prop.B.R <-aggregate(dur_prop.B~X.U.FEFF.Name, raw, mean)
 
-raw2 <- cbind(avg.dur_prop.W, avg.dur_prop.B)
+raw2 <- cbind(avg.dur_prop.W.R, avg.dur_prop.B.R)
 raw2 <- raw2[-c(3)]
 
 #now have a dataframe (raw2) with name, avg dur in W, and avg dur in B --> need spp info too; not sure how to automate
@@ -150,16 +150,59 @@ raw2 <- cbind(raw2, spp)
 
 #now our dataframe has name, spp, and avg durations
 
+avg.dur_prop.W.F <-aggregate(dur_prop.W~X.U.FEFF.Name, form, mean)
+
+avg.dur_prop.B.F <-aggregate(dur_prop.B~X.U.FEFF.Name, form, mean)
+
+form2 <- cbind(avg.dur_prop.W.F, avg.dur_prop.B.F)
+form2 <- form2[-c(3)]
+
+avg.dur_prop.W.L <-aggregate(dur_prop.W~X.U.FEFF.Name, lat, mean)
+
+avg.dur_prop.B.L <-aggregate(dur_prop.B~X.U.FEFF.Name, lat, mean)
+
+lat2 <- cbind(avg.dur_prop.W.L, avg.dur_prop.B.L)
+lat2 <- lat2[-c(3)]
+
+
 ```
+
+So we know that the duration in each color doesn't significantly differ between tanks for each species. Now let's see if the average duration in each color shows a preference in each speces. Here, we want to see if the average duration in each color (in each species) is different from 0.5 (a 0.5 proportion would mean they spent half their time in white and half in black, thus showing no preference).
+
+
+```{r}
+
+wilcox.test(form2$dur_prop.W, mu=0.5)
+wilcox.test(form2$dur_prop.B, mu=0.5)
+
+wilcox.test(lat2$dur_prop.W, mu=0.5)
+wilcox.test(lat2$dur_prop.W, mu=0.5)
+
+
+```
+
+
+<font color= "deeporchid4"> ***RESULTS:***</font> it does not seem that either species has a preference for a particular color. Thus, neither species seems to be performing scototaxis: they do not spend more time in the dark portion to protect themselves/out of fear. This is a neat result! Obviously need more sailfin to really say anything, and further analyses of thigmotatic behavior can tell us if they were useing thigmotaxis as a "safety" measure more than the coloration.
 
 
 The ultimate goal is to determine if the species differ in their durations. *Will be a little awkward since we only have 2 sailfin to our 10 amazons, but we'll go with it for now.* For this, we'll use a wilcox sum rank test (aka mann whitney u), since we're looking for differences between two groups, but this time the groups aren't paired (our groups here are species, not the tanks). 
 
 
 ```{r}
-wilcox.test(dur_prop.W~spp, data = raw2, paired=FALSE, mu=0.5)
-wilcox.test(dur_prop.B~spp, data = raw2, paired=FALSE, mu=0.5)
+wilcox.test(dur_prop.W~spp, data = raw2, paired=FALSE)
+wilcox.test(dur_prop.B~spp, data = raw2, paired=FALSE)
 
 ```
 
-<font color= "deeporchid4"> ***RESULTS:***</font> got non-significant results for both tests...in fact, got the same p-value (0.06061), so I'm not sure if that's a result of having so few sailfins or if I did the test wrong. At the moment, it does not seem that the species differ in their 
+<font color= "deeporchid4"> ***RESULTS:***</font> got non-significant results for both tests...in fact, got the same p-value (0.06061), so I'm not sure if that's a result of having so few sailfins or if I did the test wrong. At the moment, it does not seem that the species differ in the amount of time they spend in either color --so not only is there no preference for a color in either speices, the species don't differ in the lack of preference. 
+
+
+***Still not telling us anything about variation --more analyses to come.***
+
+
+
+
+
+
+
+
