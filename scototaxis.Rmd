@@ -1,0 +1,23 @@
+---
+title: "Scototaxis"
+author: "Allison Davis"
+date: "May 6, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data collection
+
+```{r, warning=FALSE, message=FALSE}
+library(curl)
+
+raw <- curl("https://raw.githubusercontent.com/allisondavis/scototaxis/master/Scototaxis_raw_cole-data.csv")
+
+raw <- read.csv(raw, header = TRUE, sep = ",", stringsAsFactors = TRUE)
+
+head(raw)
+
+```
