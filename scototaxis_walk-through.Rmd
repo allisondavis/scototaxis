@@ -9,6 +9,30 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# Introduction
+
+In this section, introduce your project. Discuss relavent background information, the questions you're address and why you think it's cool, and include your hypotheses and predictions.
+
+<font color= "deeporchid4"> ***INTRO:***</font>
+
+
+
+
+# Methods
+
+In this section, briefly describe your experimental methods --just enough to give a reader an idea of how your ran them, no need for a step-by-step. 
+
+<font color= "deeporchid4"> ***HOW TO:***</font>
+
+
+
+
+
+
+# Results
+
+In this section, we'll walk through the analyses and you'll discuss your results as we go.
+
 
 ## Data collection
 
@@ -75,7 +99,7 @@ So let's begin with summary statistics. For this you will need: rstatix package,
   * For more details on how to use get_summary_stats() see: https://www.datanovia.com/en/lessons/wilcoxon-test-in-r/#summary-statistics-2
   
       + ex: get_summary_stats(weight, type ="median", data=mice)
-          + the %>% used on the website requires another package, but is just specifying the data frame to use; instead use data=name in fuction.
+          + the %>% used on the website requires another package, but is just specifying the data frame to use; instead use data=name in fuction OR specify by mice$weight.
 
 
 ```{r}
@@ -121,7 +145,7 @@ For this you will use: boxplot()
 
 Now that you've done basic statistics, how does your data look? Write about the trends you see below.
 
-<font color="deeporchid4"> ***First look at data:*** </font>
+<font color="deeporchid4"> ***FIRST LOOK AT DATA:*** </font>
 
 
 
@@ -133,10 +157,306 @@ Now that you've done basic statistics, how does your data look? Write about the 
 
 Ok, now we dive even deeper. Let's review the questions we want to answer with our more complicated stats:
 
-1) Are there differences between tank A and tank B? We want to make sure there wasn't a tank bias, meaning they all acted weird in tank B over tank A. We also want to make sure that there isn't a trial bias, meaning 
+1) Are there differences between tank A and tank B? We want to make sure there wasn't a tank bias, meaning they all acted weird in tank B over tank A. We also want to make sure that there isn't a trial bias, meaning the fish didn't perform super different on trial 1 from trial 2 (again, between the tanks). 
+
+2) Is there a preference for a particular color in each species? Previous research stated a preference for black over white, as the fish blended in more; a fish who spent time in the white was considered "bold." So we want to see if either species shows a preference.
+
+3) Do the species differ in their color preference? Here we want to see how color preference compares between the sailfin and amazons; if both preferred black, did one species prefer black more than the other species?
+
+
+All of these stats focus on the duration data. Each fish got 10min trial, and so black + white scoring should be around 600s. While all durations are close to this sum, they're not exact, so it's better to work with the proportion of time in each color. That is, you need to calculate the time spent in one color out of the total amount of time.
+
+To get the proportion data for each individual, you first need to sum the duration in white and duration in black data for each observation. You will add this to our original dataframe as a new column.
+
+For this you will use: rowSums() and cbind()
+
+  * Stuck? See "Scototaxis" tab on the Intro to R html.
+  
+  * Remember, you want to sum specific colomns, so make sure to use the select annotation (the name[#:#] format)
+  
+  * Remember to give a new name to the sums so you can add them on to the original data frame!
+  
+  * Since you will use this for all analyses, perform on the raw, sailfin and amazon data frames. 
+  
+```{r}
+#sum the dur_white and dur_black columns in the raw data frame
+
+#bind this as a new column to the raw data frame
+
+
+#sum the dur_white and dur_black columns in the sailfin data frame
+
+#bind this as a new column to the sailfin data frame
+
+
+#sum the dur_white and dur_black columns in the amazon data frame
+
+#bind this as a new column to the amazon data frame
+
+
+```
+
+
+Now that you have the totals, you can calculate the proportions spent in each color for each individual. You will have to create your own function for this --a function that will take duration and divide it by the specific sums you just created. You'll then apply this function to the data frame so it can calculate all in one step! You can then add the proportion values back to the original data frame to use in our stats. Unfortunately, since you're applying the function to two columns, R ignores the name you give it in your cbind instructions, so you will have to rename your columns.
+
+For this you use: lapply(), function(x){}, cbind(), and names()
+
+  * Stuck? See the "Scototaxis" tab in Intro to R html.
+  
+  * Remember to rename your new values so you add them onto your original data frame!
+  
+  * Remember to use the names function to rename your columns; R will use the same column names as a default, but you want to make sure you're reffering to specific data in your stats. To change specific column names, use: names(dataframe)[#] <- "NewName"
+
+  * Since you will use this for all analyses, perform on the raw, sailfin and amazon data frames. 
+
+```{r}
+#apply your proportion function to dur_white and dur_black columns in the raw data frame
+
+#bind this as a new column in the raw data frame
+
+#rename the dur_white proportion column (R will automatically name it dur_white, but you need to specify that this is a proportion)
+
+#rename the dur_black proportion column (R will automatically name it dur_black, but you need to specify that this is a proportion)
+
+
+
+#apply your proportion function to dur_white and dur_black columns in the sailfin data frame
+
+#bind this as a new column in the sailfin data frame
+
+#rename the dur_white proportion column 
+
+#rename the dur_black proportion column 
+
+
+
+#apply your proportion function to dur_white and dur_black columns in the amazon data frame
+
+#bind this as a new column in the amazon data frame
+
+#rename the dur_white proportion column 
+
+#rename the dur_black proportion column 
+
+
+
+```
+
+
+Awesome! All your data frames should now be ready to answer our questions. They should include all the original data, a duration sums column, a proportion white column, and a proportion black column.
+
+To address all our questions, we will be using Wilcox signed rank tests and Wilcox rank sum tests (aka Mann Whitney U). We are using Wilcox tests for three reasons. First, we have a small sample size. Most typical statistical tests, like a t-test, require that you have a normal distribution in your data. Unfortunately with small sample sizes, it is rarely the case that they meet these normal distributions. Therefore Wilcox tests are used becuase they don't need the data to be normal before analyzing. Second reason for this choice is that our data are not independent. What this means is that the choice between white and black is not independent of each other - if a fish chooses not to be in white, then this *automatically* means shes in black. To have independent data, we would've needed a neutral zone (like a gray zone in the middle). Again, tests like t-test, assume your data are independent but Wilcox tests can handle this. Last reason to use Wilcox tests is our use of proportion data. To use proportions in a t-test you have to transform your data first --something most scientists hesitate to do, because conclusions from transformed data are hard to interpret. Since the Wilcox tests just assign a rank to our proportions rather than using the actual proportion values, it escapes the need to transform data.
+
+For both types of Wilcox tests, you'll use the wilcox.test() function.
+
+  * when paired=TRUE: performs a signed rank test, testing the null hypothesis that x-y is symmetric about mu; our null is that x-y (difference of duration in tank A and B) is 0, so mu is 0.
+  * when paired=FALSE: performs a rank sum test, testing null hyp that the distributions of x and y differ by a location shift of mu (alternative is their shit is something other than mu); again, our null hypothesis is that the distribution of x and y (sailfin and amazon) do not differ, so mu is 0.
+
+
+We'll go into more detail on the tests with each question, but check out the "Scototaxis" tab in the Intro to R html for good videos describing the Wilcox tests. Another good place to check (especially for how to use the functions in R) is: https://www.datanovia.com/en/lessons/wilcoxon-test-in-r/#summary-statistics-2 
+
+
+
+Let's begin with our question (1)
+
+1) Are there differences between tank A and tank B?
+
+You want to test if sailfin individuals differed from tank A and B, and if amazon individuals differed from tank A and B. Here, the data is paired --you're looking at how Amy did in tank A and how she did in tank B, so the observations for each tank are paired for each individual. Since they are paired, you will use a Wilcox signed rank test. We don't want to confound the results of species, so you'll analyse the tank A and B differences separately for each of the species. If there is no significant difference between the tank responses, we can get an average duration in white and black for each individaul. If there is a difference, we will have to run separate analyses per tank for questions 2 and 3.
+
+For this question, you will use: wilcox.test()
+
+  * Stuck? See the "Scototaxis" tab in the Intro to R html.
+  
+  * Remember, these are paired observations, so you will have to add paired=TRUE to your function
+  
+  * Since our data are not independent, we really only need to run analyses for one color (so you'll only run for duration in white OR duration in black). They will give you the same p-value, so just choose the color you want to justify (i.e. you want to see if duration in white is preferred or not because of xyz reasons). 
+  
+  * We want our analyses to address duration by tank, so remember to use our y~x format (again, see the datanovia website listed above)
+
+
+```{r}
+#run a wilcox signed rank test for duration in one color for the sailfin mollies
+
+
+
+# run a wilcos signed rank test for duration in one color for the amazon mollies (make color consistent with one above)
+
+
+
+```
+
+
+What did you find? Discuss your results below, and what it means for our data (can we combine or do we have to keep them separate?).
+
+<font color= "deeporchid4"> ***RESULTS:***</font>
 
 
 
 
 
+
+Let's go now to question (2). 
+
+2) Is there a preference for a particular color in each species?
+
+Here we want to see if the proportion of time they spent in one of the colors is significantly different from 0.5. A 0.5 proportion means half of the time was spent in one color, the other half of time was spent in the other color --so, no preference. Here, you'll do a one-sample Wilcox signed rank test (the data here aren't paired, but one-sample tests alway run signed rank). This is a one-sample test because we're only comparing the duration in one color to 0.5, not to another sample. Since our null hypothesis assumes that the duration will be 0.5, our mu for these tests will equal 0.5.
+
+**IF YOU CAN'T COMBINE DATA**: If the tests from question 1 show major differences between the tanks, you will run the one-sample wilcox test for each tank. *Skip this step if results are not significant for question 1!*
+
+For this, you will use: wilcox.test(), and data frame selection (aka data frame[data frame$name .....])
+
+  * Since you need to test each tank separately, you'll need to create two new data frames for each species, separating out the data for the tanks (sort of like how you separated the raw data frame into two data frames for each species, but this time you're specifying tank for each species).
+  
+  * Remember, our data are not paired, so either specify paired=FALSE, or don't include paired at all (default is FALSE)
+  
+  * Since we're running just one sample against an assumption (mu=0.5), there's no need to have a y~x format; here you just input the y
+
+
+```{r}
+#create two new data frames that separate tank A and tank B from the sailfin data frame
+
+
+#create two new data frames that separate tank A and tank B from the amazon data frame
+
+
+#run a wilcox signed rank test on the duration of one color for sailfin mollies in tank A (mu=0.5)
+
+
+#run a wilcox signed rank test on the duration of one color for sailfin mollies in tank B (mu=0.5)
+
+
+#run a wilcox signed rank test on the duration of one color for amazon mollies in tank A (mu=0.5)
+
+
+#run a wilcox signed rank test on the duration of one color for amazon mollies in tank B (mu=0.5)
+
+
+
+
+```
+
+
+What did you find? Discuss your results below, and what it means for each species(do either have a preference? If so, what color, and what would this mean? If not, why might you think this is the case?). How do the statistical results compare to your visualizations?
+
+<font color= "deeporchid4"> ***RESULTS:***</font>
+
+
+
+
+
+**IF YOU CAN COMBINE DATA**: If the tests from question 1 show no significant differences between the tanks, you will find the average duration proportion for each fish and run the one-sample wilcox test on this new average.
+
+You first need to find the average duration in white or black across both tanks for each individual. Since our excel sheet is set up where Amy tank A is line one and Amy tank B is line two, we can't use our apply() or lapply() function here to create a new column. Instead, we need to use the aggregate() funtion. The aggregate function will apply a function (so for us, we would apply mean) to a dataframe by aggregating the data by some characteristic (for us, the name). The aggregate function works as follows:
+
+  `aggregate(characteristic, data frame, function)`
+  
+Unfortunately, the aggregate function does not create a simple column that we can add on to our original data frames. Instead, it creates a new data frame with the characteristic in one column and the result of the function in another column. This is fine, since we can use this new data frame in our one-sample wilcox test. 
+
+So again, you will use: aggregate()
+
+  * Remember to assign a name to your results!
+  
+  * Again, since our data are not independent, there's no need to do this for both colors. Just do this for the one color you've been testing this whole time.
+
+
+```{r}
+#calculate the mean duration in one color using the aggregate function for the sailfin data frame
+
+
+#calculate the mean duration in one color using the aggregate function for the amazon data frame
+
+
+
+```
+
+
+Now we have our averages for each individual, let's again use the one-sample wilcox signed rank test to see if there is a preference for one color.
+
+```{r}
+#run a wilcox signed rank test on the average duration of one color for sailfin mollies (mu=0.5)
+
+
+#run a wilcox signed rank test on the average duration of one color for amazon mollies (mu=0.5)
+
+```
+
+
+What did you find? Discuss your results below, and what it means for each species(do either have a preference? If so, what color, and what would this mean? If not, why might you think this is the case?). How do the statistical results compare to your visualizations?
+
+<font color= "deeporchid4"> ***RESULTS:***</font>
+
+
+
+
+
+Almost done! Let's turn to our last question, question (3).
+
+Do the species differ in their color preference?
+
+We're using these two species because they differ in their reproductive mode: asexual amazons vs sexual sailfins. Since the asexual amazons are hybrids between the sexual sailfins and sexual mexican mollies, any difference between the amazon and sailfin could indicate that they inherited that trait from the mexican mollies instead of the sailfin mollies (or it could mean that they evolved a completely different trait, which would be dope since that doesn't happen often in clones!). So here, we want to see if the amazons and sailfins differ in their color preference. Even if they did not have a prefernce (result from question 2), they could still differ in their times spent in a color (ex: both species did not spend more or less time in black from our 0.5 assumption, but the sailfin mollies definitely spent more time in the black than the amazons did).
+
+Here our samples are NOT paired, we are not looking at the same individual twice but rather two very different individuals. Therefore, you'll use a Wilcox rank sum test, also known as a Mann Whitney U test.
+
+Since we want to test across species, you'll need to either combine the two average duration data frames, or apply the aggregate function to the raw data frame. Either way, it will not have a column with species, just name and average. You'll need to manually create a vector of species names to bind as a new column. Code ***just one of*** the following choices, and use the species vector I included if your names are in the same order (if they're not in the same order, look at your raw data frame to get species information).
+
+```{r}
+#CHOICE 1: combine the average data frames for each species into one data frame
+  #NOTE: to combine your sailfin average duration data frame and your amazon average duration data frame, use rbind(); this way you still end up with one column of names and one column of averages.
+
+
+  #create species vector: my name order is Amy, Aria, Ashley, Chloe, Finley, Lucy, Luna, Meagan, Olivia, Sofia, Tilly, Tory
+
+SPP <- c("form", "form", "form", "form", "lat", "form", "form", "form", "form", "form", "lat", "form")
+
+  #bind SPP as a new column to the combined data frame you just created
+
+
+
+#CHOICE 2: apply aggreate to raw data frame and add species
+  #use aggreagate function on raw data frame to get mean duration for one color
+
+
+  
+  #create species vector: my name order is Amy, Aria, Ashley, Chloe, Finley, Lucy, Luna, Meagan, Olivia, Sofia, Tilly, Tory
+
+SPP <- c("form", "form", "form", "form", "lat", "form", "form", "form", "form", "form", "lat", "form")
+
+  #bind SPP as a new column to the new averaged data frame you just created
+
+
+
+```
+
+
+Now that we have a data frame with name, average duration for one color, and species, we can perform our wilcox rank sum test.
+
+Again, you will use: wilcox.test()
+
+  * Again, we're testing average duration by species, so you'll want to use our y~x format here
+  
+  * Again, this data is not paired, so either specify paired=FALSE or don't include paired at all (default is FALSE)
+  
+  * Our nully hypothesis here is that the distribution of one species is no different than the distribution of the other speices, so our mu=0
+
+
+```{r}
+#run a wilcox rank sum test on the average duration of one color between species
+
+
+
+```
+
+
+What did you find? Discuss your results below, and what it means for our species comparison? Do the asexual and sexual species differ?
+
+<font color= "deeporchid4"> ***RESULTS:***</font>
+
+
+
+
+# Discussion and Conclusions
+
+In this section, summarise your results from all your tests. How did your results address our three questions we tested? How did your results address your hypotheses and predictions? Make sure to connect your results back to the background information --what do your results say about asexual vs sexual species?
+
+<font color= "deeporchid4"> ***CONCLUSIONS:***</font>
 

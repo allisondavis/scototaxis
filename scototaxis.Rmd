@@ -165,6 +165,7 @@ lat2 <- cbind(avg.dur_prop.W.L, avg.dur_prop.B.L)
 lat2 <- lat2[-c(3)]
 
 
+
 ```
 
 So we know that the duration in each color doesn't significantly differ between tanks for each species. Now let's see if the average duration in each color shows a preference in each speces. Here, we want to see if the average duration in each color (in each species) is different from 0.5 (a 0.5 proportion would mean they spent half their time in white and half in black, thus showing no preference).
